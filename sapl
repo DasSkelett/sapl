@@ -1,0 +1,125 @@
+#!/bin/bash
+
+#### Pathes
+
+if [[ ! -d /tmp/sapl ]]; then
+    mkdir /tmp/sapl
+fi
+
+#LISTFILE='/tmp/sapl/sapl.list'
+PARSEFILE='/tmp/sapl/sapl.parsed'
+STOPFILE='/tmp/sapl/sapl.stop'
+RUNFILE='/tmp/sapl/sapl.running'
+
+#touch $LISTFILE
+touch $PARSEFILE
+
+#### FUNCTIONS
+
+mplay() {
+    # Now play one after another
+    touch $RUNFILE
+    for (( i = 0; i < ${#SONGLIST[@]}; i++ )); do
+        if [[ -f $STOPFILE || !(-s $PARSEFILE) ]]; then
+            rm $STOPFILE
+            rm $RUNFILE
+            exit
+        fi
+        sap $(echo ${SONGLIST[i]##*\ }) #>/dev/null 2>&1
+        tail -n +2 "$PARSEFILE" > "$PARSEFILE.tmp" && mv "$PARSEFILE.tmp" "$PARSEFILE"
+    done
+    rm $RUNFILE
+    sapl
+}
+
+listqueue() {
+    cat -n ${PARSEFILE}
+}
+
+parse() {
+    tempvar=$(youtube-dl -q --skip-download --no-playlist -x --get-id -e "ytsearch:${1}")
+    echo $tempvar >> $PARSEFILE
+}
+
+parselink() {
+    tempvar=$(youtube-dl -q --skip-download --no-playlist -x --get-id -e "${1}")
+    echo $tempvar >> $PARSEFILE
+}
+ parseplaylist() {
+     IFS=$'\r\n' GLOBIGNORE='*' command eval 'tempvar1=($(youtube-dl -q --skip-download -x -e "${1}"))'
+     # tempvar1=($(youtube-dl -q --skip-download -x -e "${1}"))
+     IFS=$'\r\n' GLOBIGNORE='*' command eval 'tempvar2=($(youtube-dl -q --skip-download -x --get-id "${1}"))'
+     # tempvar2=($(youtube-dl -q --skip-download -x --get-id "${1}"))
+     for (( i = 0; i < ${#tempvar1[@]}; i++ )); do
+         echo ${tempvar1[i]} >> $PARSEFILE
+         echo "$(cat $PARSEFILE) ${tempvar2[i]}" > $PARSEFILE
+     done
+ }
+#### LOGIC
+
+# Process arguments
+
+if [[ $1 == "add" ]]; then
+    parse "${2}"
+    echo "---- Current playlist:"
+    listqueue
+    exit
+fi
+
+if [[ $1 == "addl" ]]; then
+    parselink "${2}"
+    echo "---- Current playlist:"
+    listqueue
+    exit
+fi
+
+if [[ $1 == "addpl" ]]; then
+    parseplaylist "${2}"
+    echo "---- Current playlist:"
+    listqueue
+    exit
+fi
+
+if [[ $1 == "remove" ]]; then
+    head -n -1 "$PARSEFILE" > "$PARSEFILE.tmp" && mv "$PARSEFILE.tmp" "$PARSEFILE"
+    echo "---- Current playlist:"
+    listqueue
+    exit
+fi
+
+if [[ $1 == "list" ]]; then
+    echo "---- Queued:"
+    listqueue
+    exit
+fi
+
+if [[ $1 == "stop" ]]; then
+    touch $STOPFILE
+    echo "---- Stopping! (After this song...)"
+    exit
+fi
+
+if [[ $1 == "return" ]]; then
+    rm $STOPFILE
+    echo "---- Returning..."
+fi
+
+
+if [[ !(-s $PARSEFILE) ]]; then
+    echo "---- Nothing queued, exiting..."
+    rm $RUNFILE
+    exit
+fi
+
+
+# Read file
+
+IFS=$'\r\n' GLOBIGNORE='*' command eval 'SONGLIST=($(cat ${PARSEFILE}))'
+
+
+if [[ -f $RUNFILE ]]; then
+    echo "---- Already runnig, cancelling."
+    exit
+fi
+echo '---- Starting!'
+mplay>/dev/null 2>&1 &
