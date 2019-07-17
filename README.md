@@ -1,6 +1,11 @@
 ## What is sapl?
-Sapl stands for "Stream and play list".
-It started as "sap", as the function to create a playlist was added, the command was renamed to `sapl`.
+Sapl stands for "Stream and Play List".
+It started as "sap" (for "Stream and Play"), as the function to create a playlist was added, the command was renamed to `sapl`.
+
+## What are the prerequisites?
+
+You need the [VLC Media Player by VideoLAN](http://www.videolan.org/vlc/) installed, especially the `cvlc` command is used here. Try this `cvlc --version` to see if it is available on your system.
+You need [youtube-dl](http://ytdl-org.github.io/youtube-dl/) installed. Make sure you are running the latest version (`youtube-dl -u`), it's really important!
 
 ## How does it work?
 1) `sapl add "<songname>"`
@@ -18,3 +23,20 @@ It started as "sap", as the function to create a playlist was added, the command
 
 5) `sapl list`
     List the scheduled songs.
+
+6) `sapl help`
+    Get additional help and usage informations.
+   
+
+Run any of those commands in your console.
+
+
+## How to install?
+Just download the `sapl` file and put it in a folder included in your `PATH` and make it executable.
+E.g.
+```
+mkdir ~/bin/
+cd ~/bin/
+curl -O "https://raw.githubusercontent.com/DasSkelett/sapl/master/sapl"
+chmod +x "./sapl"
+```

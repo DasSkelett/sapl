@@ -1,17 +1,36 @@
 #!/bin/bash
 
-#### Pathes
+# Copyright (C) 2019 DasSkelett <https://github.com/DasSkelett>
+#
+# sapl - stream audio of youtube videos and play it via the VLC Media Player
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-if [[ ! -d /tmp/sapl ]]; then
-    mkdir /tmp/sapl
+
+#### Pathes and files
+
+# Resolves to /tmp/sapl/
+TMPDIRECTORY=$TMPDIR'/sapl/'
+
+if [[ ! -d $TMPDIRECTORY ]]; then
+    mkdir $TMPDIRECTORY
 fi
 
-#LISTFILE='/tmp/sapl/sapl.list'
-PARSEFILE='/tmp/sapl/sapl.parsed'
-STOPFILE='/tmp/sapl/sapl.stop'
-RUNFILE='/tmp/sapl/sapl.running'
+PARSEFILE=$TMPDIRECTORY'sapl.parsed'
+STOPFILE=$TMPDIRECTORY'sapl.stop'
+RUNFILE=$TMPDIRECTORY'sapl.running'
 
-#touch $LISTFILE
 touch $PARSEFILE
 
 #### FUNCTIONS
@@ -25,7 +44,7 @@ mplay() {
             rm $RUNFILE
             exit
         fi
-        sap $(echo ${SONGLIST[i]##*\ }) #>/dev/null 2>&1
+        youtube-dl -q --no-playlist -o - "$(echo ${SONGLIST[i]##*\ })" | cvlc --quiet --play-and-exit --no-video - #>/dev/null 2>&1
         tail -n +2 "$PARSEFILE" > "$PARSEFILE.tmp" && mv "$PARSEFILE.tmp" "$PARSEFILE"
     done
     rm $RUNFILE
@@ -45,19 +64,43 @@ parselink() {
     tempvar=$(youtube-dl -q --skip-download --no-playlist -x --get-id -e "${1}")
     echo $tempvar >> $PARSEFILE
 }
- parseplaylist() {
-     IFS=$'\r\n' GLOBIGNORE='*' command eval 'tempvar1=($(youtube-dl -q --skip-download -x -e "${1}"))'
-     # tempvar1=($(youtube-dl -q --skip-download -x -e "${1}"))
-     IFS=$'\r\n' GLOBIGNORE='*' command eval 'tempvar2=($(youtube-dl -q --skip-download -x --get-id "${1}"))'
-     # tempvar2=($(youtube-dl -q --skip-download -x --get-id "${1}"))
-     for (( i = 0; i < ${#tempvar1[@]}; i++ )); do
-         echo ${tempvar1[i]} >> $PARSEFILE
-         echo "$(cat $PARSEFILE) ${tempvar2[i]}" > $PARSEFILE
-     done
- }
-#### LOGIC
+parseplaylist() {
+    IFS=$'\r\n' GLOBIGNORE='*' command eval 'tempvar1=($(youtube-dl -q --skip-download -x -e "${1}"))'
+    
+    IFS=$'\r\n' GLOBIGNORE='*' command eval 'tempvar2=($(youtube-dl -q --skip-download -x --get-id "${1}"))'
+    
+    for (( i = 0; i < ${#tempvar1[@]}; i++ )); do
+        echo ${tempvar1[i]} >> $PARSEFILE
+        echo "$(cat $PARSEFILE) ${tempvar2[i]}" > $PARSEFILE
+    done
+}
+
+usage() {
+    echo "sapl - stream audio of youtube videos and play it via the VLC Media Player
+Copyright (C) 2019 DasSkelett <https://github.com/DasSkelett>
+
+usage: sapl <command>
+where command is one of:
+
+* help:   show this usage information
+* return: start playing again
+* stop:   stop sapl when the current song ends
+* add:    search for a video on YouTube and add it to the playlist
+* addl:   add link to playlist
+* addpl:  add YouTube playlist to sapl playlist
+* remove: remove last scheduled video
+* list:   list all scheduled videos of the playlist"
+}
+
+ 
+#### MAIN LOGIC
 
 # Process arguments
+
+if [[ $1 == "help" || $1 == "--help" || $1 == "-h" ]]; then
+    usage
+    exit
+fi
 
 if [[ $1 == "add" ]]; then
     parse "${2}"
@@ -107,7 +150,11 @@ fi
 
 if [[ !(-s $PARSEFILE) ]]; then
     echo "---- Nothing queued, exiting..."
-    rm $RUNFILE
+    
+    if [[ -f $RUNFILE ]]; then
+        rm $RUNFILE
+        exit
+    fi
     exit
 fi
 
@@ -121,5 +168,6 @@ if [[ -f $RUNFILE ]]; then
     echo "---- Already runnig, cancelling."
     exit
 fi
+
 echo '---- Starting!'
 mplay>/dev/null 2>&1 &
