@@ -1,3 +1,9 @@
+## The software sapl
+
+Copyright (C) 2019, DasSkelett <https://github.com/DasSkelett>
+
+is licensed under the following terms:
+
 ### GNU LESSER GENERAL PUBLIC LICENSE
 
 Version 3, 29 June 2007

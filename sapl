@@ -8,28 +8,26 @@
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
 #### Pathes and files
-
-# Resolves to /tmp/sapl/
-TMPDIRECTORY=$TMPDIR'/sapl/'
-
-if [[ ! -d $TMPDIRECTORY ]]; then
-    mkdir $TMPDIRECTORY
+TMPDIRECTORY=$(ls -t -d -w 1 /tmp/sapl-* | head -1)
+if [[ $? > 0 ]]; then
+    # Resolves to a folder in /tmp, beginning with "sapl-".
+    TMPDIRECTORY=$(mktemp -d -t sapl-XXX)
 fi
 
-PARSEFILE=$TMPDIRECTORY'sapl.parsed'
-STOPFILE=$TMPDIRECTORY'sapl.stop'
-RUNFILE=$TMPDIRECTORY'sapl.running'
+PARSEFILE=$TMPDIRECTORY'/sapl.parsed'
+STOPFILE=$TMPDIRECTORY'/sapl.stop'
+RUNFILE=$TMPDIRECTORY'/sapl.running'
 
 touch $PARSEFILE
 
@@ -66,9 +64,9 @@ parselink() {
 }
 parseplaylist() {
     IFS=$'\r\n' GLOBIGNORE='*' command eval 'tempvar1=($(youtube-dl -q --skip-download -x -e "${1}"))'
-    
+
     IFS=$'\r\n' GLOBIGNORE='*' command eval 'tempvar2=($(youtube-dl -q --skip-download -x --get-id "${1}"))'
-    
+
     for (( i = 0; i < ${#tempvar1[@]}; i++ )); do
         echo ${tempvar1[i]} >> $PARSEFILE
         echo "$(cat $PARSEFILE) ${tempvar2[i]}" > $PARSEFILE
@@ -92,7 +90,7 @@ where command is one of:
 * list:   list all scheduled videos of the playlist"
 }
 
- 
+
 #### MAIN LOGIC
 
 # Process arguments
@@ -150,7 +148,7 @@ fi
 
 if [[ !(-s $PARSEFILE) ]]; then
     echo "---- Nothing queued, exiting..."
-    
+
     if [[ -f $RUNFILE ]]; then
         rm $RUNFILE
         exit

@@ -4,8 +4,7 @@ It started as "sap" (for "Stream and Play"), as the function to create a playlis
 
 ## What are the prerequisites?
 
-You need the [VLC Media Player by VideoLAN](http://www.videolan.org/vlc/) installed, especially the `cvlc` command is used here. Try this `cvlc --version` to see if it is available on your system.
-You need [youtube-dl](http://ytdl-org.github.io/youtube-dl/) installed. Make sure you are running the latest version (`youtube-dl -u`), it's really important!
+You need the [VLC Media Player by VideoLAN](http://www.videolan.org/vlc/) installed, especially the `cvlc` command is used here. Try `cvlc --version` to see if it is available on your system. You need [youtube-dl](http://ytdl-org.github.io/youtube-dl/) installed. Make sure you are running the latest version (`youtube-dl -u`), it's really important!
 
 ## How does it work?
 1) `sapl add "<songname>"`
