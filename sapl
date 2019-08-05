@@ -19,8 +19,10 @@
 
 
 #### Pathes and files
-TMPDIRECTORY=$(ls -t -d -w 1 /tmp/sapl-* | head -1)
-if [[ $? > 0 ]]; then
+TMPDIRECTORY=$(ls -t -d -w 1 /tmp/sapl-* 2> /dev/null)
+if [[ $? == 0 ]]; then
+    TMPDIRECTORY=$(ls -t -d -w 1 /tmp/sapl-* | head -1)
+else
     # Resolves to a folder in /tmp, beginning with "sapl-".
     TMPDIRECTORY=$(mktemp -d -t sapl-XXX)
 fi
@@ -81,7 +83,7 @@ usage: sapl <command>
 where command is one of:
 
 * help:   show this usage information
-* return: start playing again
+* resume: start playing again
 * stop:   stop sapl when the current song ends
 * add:    search for a video on YouTube and add it to the playlist
 * addl:   add link to playlist
@@ -93,54 +95,117 @@ where command is one of:
 
 #### MAIN LOGIC
 
-# Process arguments
+# Process arguments, see https://stackoverflow.com/a/29754866
+#
+# -allow a command to fail with !’s side effect on errexit
+# -use return value from ${PIPESTATUS[0]}, because ! hosed $?
+# ! getopt --test > /dev/null
+# if [[ ${PIPESTATUS[0]} -ne 4 ]]; then
+#     echo 'I’m sorry, `getopt --test` failed in this environment. GNU-enhanced getopts must be installed.'
+#     exit 1
+# fi
+#
+# OPTIONS=hva:lpdsqpr
+# LONGOPTS=help,version,add:,addl:,addpl:,delete,remove,stop,quit,pause,return,resume
+#
+# -temporarily store output to be able to check for errors
+# -activate quoting/enhanced mode (e.g. by writing out “--options”)
+# -pass arguments only via   -- "$@"   to separate them correctly
+# ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
+# if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+#     e.g. return value is 1
+#      then getopt has complained about wrong arguments to stdout
+#     echo "Wrong argument(s)!"
+#     exit 2
+# fi
+#
+# read getopt’s output this way to handle the quoting right:
+# eval set -- "$PARSED"
+#
+# now enjoy the options in order and nicely split until we see --
+# while true; do
+#     case "$1" in
+#         -h|--help)
+#             usage()
+#             shift
+#             ;;
+#         -v|--version)
+#             f=y
+#             shift
+#             ;;
+#         -a|--add)
+#             outFile="$2"
+#             shift
+#             ;;
+#         -al|--addl)
+#             outFile="$2"
+#             shift
+#             ;;
+#         --)
+#             shift
+#             break
+#             ;;
+#         *)
+#             echo "Programming error"
+#             exit 3
+#             ;;
+#     esac
+# done
+#
+# handle non-option arguments
+# if [[ $# -ne 1 ]]; then
+#     echo "$0: A single input string is required."
+#     exit 4
+# fi
+
+#######
 
 if [[ $1 == "help" || $1 == "--help" || $1 == "-h" ]]; then
     usage
-    exit
+    exit 0
 fi
 
 if [[ $1 == "add" ]]; then
     parse "${2}"
     echo "---- Current playlist:"
     listqueue
-    exit
+    exit 0
 fi
 
 if [[ $1 == "addl" ]]; then
     parselink "${2}"
     echo "---- Current playlist:"
     listqueue
-    exit
+    exit 0
 fi
 
 if [[ $1 == "addpl" ]]; then
     parseplaylist "${2}"
     echo "---- Current playlist:"
     listqueue
-    exit
+    exit 0
 fi
 
-if [[ $1 == "remove" ]]; then
+if [[ $1 == "remove" || $1 == "delete" ]]; then
     head -n -1 "$PARSEFILE" > "$PARSEFILE.tmp" && mv "$PARSEFILE.tmp" "$PARSEFILE"
     echo "---- Current playlist:"
     listqueue
-    exit
+    exit 0
 fi
 
 if [[ $1 == "list" ]]; then
     echo "---- Queued:"
     listqueue
-    exit
+    exit 0
 fi
 
 if [[ $1 == "stop" ]]; then
     touch $STOPFILE
     echo "---- Stopping! (After this song...)"
-    exit
+    exit 0
 fi
 
-if [[ $1 == "return" ]]; then
+if [[ $1 == "return" || $1 == "resume" ]]; then
     rm $STOPFILE
     echo "---- Returning..."
 fi
@@ -151,9 +216,8 @@ if [[ !(-s $PARSEFILE) ]]; then
 
     if [[ -f $RUNFILE ]]; then
         rm $RUNFILE
-        exit
     fi
-    exit
+    exit 0
 fi
 
 
@@ -164,7 +228,7 @@ IFS=$'\r\n' GLOBIGNORE='*' command eval 'SONGLIST=($(cat ${PARSEFILE}))'
 
 if [[ -f $RUNFILE ]]; then
     echo "---- Already runnig, cancelling."
-    exit
+    exit 1
 fi
 
 echo '---- Starting!'
